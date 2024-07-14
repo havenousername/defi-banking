@@ -17,19 +17,19 @@ contract BBSEBank {
   uint8 public constant BLOCK_TIME = 12;
   
   // Minimum deposit amount (1 Ether, expressed in Wei)
-  // TODO: Create a uint MIN_DEPOSIT_AMOUNT constant variable
+  uint public constant MIN_DEPOSIT_AMOUNT = 1_000_000_000_000_000_000;
 
-  /* Interest earned per second for a minumum deposit amount.
+  /* Interest earned per second for a minimum deposit amount.
    * Equals to the yearly return of the minimum deposit amount
    * divided by the number of seconds in a year.
   */
   uint public interestPerSecondForMinDeposit;
 
   // Represents an investor record
-  struct Investor {   // TODO: Complete the missing types
-    // hasActiveDeposit;
-    // amount;
-    uint startTime;
+  struct Investor {
+    uint256 amount;
+    bool hasActiveDeposit;
+    uint256 startTime;
   }
 
   // Address to investor mapping
@@ -46,11 +46,11 @@ contract BBSEBank {
   */
   constructor (address _bbseTokenContract, uint32 _yearlyReturnRate) public {
     bbseTokenContract = BBSEToken(_bbseTokenContract);
-    
-    // TODO: Check yearly return rate and set the variable
 
-    // TODO: Uncomment
-    // interestPerSecondForMinDeposit = ((MIN_DEPOSIT_AMOUNT * yearlyReturnRate) / 100) / YEAR_SECONDS;
+    require(_yearlyReturnRate <= 100 && _yearlyReturnRate >= 1, "Yearly return rate must be between 1 and 100");
+    yearlyReturnRate = _yearlyReturnRate;
+
+    interestPerSecondForMinDeposit = ((MIN_DEPOSIT_AMOUNT * yearlyReturnRate) / 100) / YEAR_SECONDS;
   }
 
   /**
@@ -59,8 +59,11 @@ contract BBSEBank {
   * Minimum deposit amount is 1 Ether (be careful about decimals!)
   * Investor can't have an already active deposit.
   */
-  function deposit() payable public{
-    // TODO: Complete the function
+  function deposit() payable public {
+    require(msg.value >= MIN_DEPOSIT_AMOUNT, "Minimum deposit amount is 1 Ether");
+    Investor storage investor = investors[msg.sender];
+    require(!investor.hasActiveDeposit, "Account can\'t have multiple active deposits");
+    investors[msg.sender] = Investor(msg.value, true, block.number);
   }
 
   /**
@@ -72,31 +75,22 @@ contract BBSEBank {
   * Investor must have an active deposit.
   */
   function withdraw() public {
-    // TODO: Check whether the investor (i.e. function caller) has an active investment
     Investor storage investor = investors[msg.sender];
-    
-    // TODO: Uncomment
-    // uint depositedAmount = investor.amount;
+    require(investor.hasActiveDeposit, "Account must have an active deposit to withdraw");
 
-    // TODO: Find the deposit duration and store it in uint depositDuration variable (block_number_difference x block_time)
+    uint depositedAmount = investor.amount;
+    uint depositDuration = (block.number - investor.startTime) * BLOCK_TIME;
+
+    uint interestPerSecond = interestPerSecondForMinDeposit * (depositedAmount / MIN_DEPOSIT_AMOUNT);
+    uint interest = interestPerSecond * depositDuration;
 
 
-    // TODO: Uncomment
-    // uint interestPerSecond = interestPerSecondForMinDeposit * (depositedAmount / MIN_DEPOSIT_AMOUNT);
+    investor.startTime = 0;
+    investor.hasActiveDeposit = false;
+    investor.amount = 0;
 
-    /* TODO: Calculate the interest using interestPerSecond and depositDuration
-    *        Store it in uint interest variable
-    */
+    payable(msg.sender).transfer(depositedAmount);
 
-    /* TODO: Reset the respective investor object in investors mapping
-    *        You can set the amount and start time to 0
-    */
-
-    /* TODO: Send back the deposited Ether to investor using the transfer method
-    *        Dont' forget to cast the investor address to a payable address
-    */
-
-    // TODO: Mint BBSE tokens to to pay out the interest
+    bbseTokenContract.mint(msg.sender, interest);
   }
-  
 }

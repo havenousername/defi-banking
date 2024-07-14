@@ -11,8 +11,8 @@ contract BBSEToken is ERC20 {
   * @dev Calls the ERC20 constructor with {name} and {symbol} values.
   * Sets the minter as the contract deployer.
   */
-  constructor() public payable ERC20("TOKEN NAME", "SYMBOL") {
-    // TODO: Complete the constructor
+  constructor() public payable ERC20("BBSE TOKEN", "BBSE") {
+    minter = msg.sender;
   }
 
   /**
@@ -21,7 +21,10 @@ contract BBSEToken is ERC20 {
   * @param _minter address of the new minter
   */
   function passMinterRole(address _minter) public {
-    // TODO: Complete the function
+    // check that the role passer is minter
+    require(msg.sender == minter, "You are not the minter");
+
+    minter = _minter;
   }
 
 
@@ -32,6 +35,7 @@ contract BBSEToken is ERC20 {
   * @param amount amount of the tokens to be issued
   */
   function mint(address account, uint256 amount) public {
-    // TODO: Complete the function
+    require(msg.sender == minter, "You are not the minter");
+    _mint(account, amount);
   }
 }
